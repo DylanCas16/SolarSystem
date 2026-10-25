@@ -41,6 +41,9 @@ const moonTex = new THREE.TextureLoader().load("templates/moon.jpg");
 // Textura Marte
 const marsTex = new THREE.TextureLoader().load("templates/mars.jpg");
 
+// Textura Asteroides
+const asteroidTex = new THREE.TextureLoader().load("templates/asteroid.jpg");
+
 // Textura Júpiter
 const jupiterTex = new THREE.TextureLoader().load("templates/jupiter.jpg");
 
@@ -53,9 +56,15 @@ const uranusTex = new THREE.TextureLoader().load("templates/uranus.jpg");
 // Textura Neptuno
 const nepturneTex = new THREE.TextureLoader().load("templates/neptune.jpg");
 
+// Textura fondo estrellado
+const spaceTex = new THREE.TextureLoader().load("templates/stars.jpg", (t) => {
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  scene.background = t;
+});
 const tmp = new THREE.Vector3();
 let cuerpos = {};
-let seguir = null;
+let planet = null;
 
 const params = {
   Velocity: 1,
@@ -63,6 +72,117 @@ const params = {
   Planet: "None",
   View: "Free",
 };
+
+const planetData = {
+  Sun: {
+    radius: 696340, distance: 0, rotation: 609.12, translation: 0, temperature: 5505,
+    dato: "El Sol contiene el 99,86 % de la masa de todo el Sistema Solar. Su núcleo alcanza unos 15 millones de °C y la luz que ves tarda unos 8 minutos y 20 segundos en llegar a la Tierra.",
+    data: "The Sun contains 99.86% of the mass of the entire Solar System. Its core reaches about 15 million °C, and the light you see takes about 8 minutes and 20 seconds to reach Earth."
+  },
+  Mercury: {
+  radius: 2439.7, distance: 57909000, rotation: 1407.6, translation: 87.97, temperature: 167,
+  dato: "Un día solar en Mercurio (de amanecer a amanecer) dura 176 días terrestres, el doble que su año, porque rota muy despacio mientras orbita deprisa. Además, pese a estar tan cerca del Sol, tiene hielo de agua en cráteres que nunca reciben luz solar.",
+  data: "A solar day on Mercury (sunrise to sunrise) lasts 176 Earth days, twice as long as its year, because it rotates very slowly while orbiting quickly. Despite being so close to the Sun, it also has water ice in craters that never receive sunlight."
+},
+Venus: {
+  radius: 6051.8, distance: 108208000, rotation: -5832.5, translation: 224.7, temperature: 464,
+  dato: "Como gira al revés, en Venus el Sol sale por el oeste. Además, su atmósfera es tan densa que la presión en superficie equivale a estar a 900 m bajo el mar.",
+  data: "Because it spins backwards, the Sun rises in the west on Venus. Its atmosphere is also so dense that surface pressure equals being 900 m underwater."
+},
+  Earth: {
+    radius: 6371, distance: 149598000, rotation: 23.934, translation: 365.256, temperature: 15,
+    dato: "La Tierra es el planeta más denso del Sistema Solar y el único con agua líquida en superficie. Su campo magnético nos protege del viento solar y genera las auroras polares.",
+    data: "Earth is the densest planet in the Solar System and the only one with liquid water on its surface. Its magnetic field shields us from the solar wind and creates the polar auroras."
+  },
+  Mars: {
+    radius: 3389.5, distance: 227956000, rotation: 24.623, translation: 686.98, temperature: -63,
+    dato: "Marte alberga el Monte Olimpo, el volcán más grande conocido (unos 22 km de altura, casi 2,5 veces el Everest). Su color rojizo se debe al óxido de hierro presente en su superficie.",
+    data: "Mars is home to Olympus Mons, the largest known volcano (about 22 km high, nearly 2.5 times Everest). Its reddish color comes from the iron oxide on its surface."
+  },
+  Jupiter: {
+    radius: 69911, distance: 778479000, rotation: 9.925, translation: 4332.59, temperature: -108,
+    dato: "Júpiter es tan masivo que contiene más del doble de masa que todos los demás planetas juntos. Su Gran Mancha Roja es una tormenta que lleva siglos activa y es más grande que la Tierra.",
+    data: "Jupiter is so massive it holds more than twice the mass of all the other planets combined. Its Great Red Spot is a storm that has raged for centuries and is larger than Earth."
+  },
+  Saturn: {
+    radius: 58232, distance: 1433530000, rotation: 10.656, translation: 10759.22, temperature: -139,
+    dato: "Saturno es menos denso que el agua: flotaría en un océano suficientemente grande. Sus anillos miden hasta 280.000 km de ancho, pero en la mayoría de zonas tienen apenas unas decenas de metros de grosor.",
+    data: "Saturn is less dense than water: it would float in a big enough ocean. Its rings span up to 280,000 km across, yet are only tens of meters thick in most places."
+  },
+  Uranus: {
+    radius: 25362, distance: 2870972000, rotation: -17.24, translation: 30688.5, temperature: -197,
+    dato: "Urano gira prácticamente 'tumbado', con una inclinación axial de 98°, por lo que sus polos pasan 42 años seguidos a la luz del Sol y otros 42 a oscuras. Además, registra la temperatura atmosférica más baja medida en un planeta: -224 °C.",
+    data: "Uranus spins almost on its side, with an axial tilt of 98°, so its poles get 42 years of continuous sunlight followed by 42 years of darkness. It also holds the record for the lowest atmospheric temperature measured on a planet: -224 °C."
+  },
+  Neptune: {
+    radius: 24622, distance: 4498252000, rotation: 16.11, translation: 60182, temperature: -201,
+    dato: "Neptuno tiene los vientos más rápidos del Sistema Solar, de más de 2.000 km/h. Fue el primer planeta descubierto mediante cálculos matemáticos antes de ser observado con telescopio (1846).",
+    data: "Neptune has the fastest winds in the Solar System, over 2,000 km/h. It was the first planet found through mathematical predictions before being observed with a telescope (1846)."
+  }
+};
+
+let currentLang = "es";
+let currentPlanet = null;
+const card = document.getElementById("planet-info");
+
+const es = () => currentLang === "es";
+const num = (n, digits = 1) =>
+  n.toLocaleString(es() ? "es-ES" : "en-US", { maximumFractionDigits: digits });
+
+function formatDistance(km) {
+  if (km === 0) return "—";
+  return km >= 1e6
+    ? `${num(km / 1e6)} ${es() ? "millones de km" : "million km"}`
+    : `${num(km)} km`;
+}
+
+function formatRotation(hours) {
+  const abs = Math.abs(hours);
+  const text = abs >= 48
+    ? `${num(abs / 24)} ${es() ? "días" : "days"}`
+    : `${num(abs)} ${es() ? "horas" : "hours"}`;
+  return hours < 0 ? `${text} (${es() ? "retrógrada" : "retrograde"})` : text;
+}
+
+function formatTranslation(days) {
+  if (days === 0) return "—";
+  return days >= 730
+    ? `${num(days / 365.25)} ${es() ? "años" : "years"}`
+    : `${num(days)} ${es() ? "días" : "days"}`;
+}
+
+function showPlanetInfo(nombre) {
+  const p = planetData[nombre];
+  if (!p) return hidePlanetInfo(); // por ejemplo "Moon", que no tiene datos
+  currentPlanet = nombre;
+
+  document.getElementById("planet-name").textContent = nombre;
+  document.getElementById("planet-data").textContent = es() ? p.dato : p.data;
+  document.getElementById("planet-radius").textContent = `${num(p.radius)} km`;
+  document.getElementById("planet-distance").textContent = formatDistance(p.distance);
+  document.getElementById("planet-rotation").textContent = formatRotation(p.rotation);
+  document.getElementById("planet-translation").textContent = formatTranslation(p.translation);
+  document.getElementById("planet-temperature").textContent = `${num(p.temperature, 0)} °C`;
+
+  card.classList.remove("hidden");
+}
+
+function hidePlanetInfo() {
+  currentPlanet = null;
+  card.classList.add("hidden");
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  document.querySelectorAll("#lang-switch button").forEach(b =>
+    b.classList.toggle("active", b.dataset.lang === lang)
+  );
+  if (currentPlanet) showPlanetInfo(currentPlanet);
+}
+
+document.querySelectorAll("#lang-switch button").forEach(btn =>
+  btn.addEventListener("click", () => setLanguage(btn.dataset.lang))
+);
 
 function createGUI() {
   cuerpos = {
@@ -83,22 +203,26 @@ function createGUI() {
 }
 
 function seleccionarObjetivo(nombre) {
-  seguir = cuerpos[nombre] ?? null;
-  if (!seguir) {
+  planet = cuerpos[nombre] ?? null;
+  if (!planet) {
     camcontrols.minDistance = 0;
     camcontrols.target.set(0, 0, 0);
+    hidePlanetInfo();
     return;
   }
-  seguir.getWorldPosition(tmp);
-  const r = seguir.geometry.parameters.radius;
+  planet.getWorldPosition(tmp);
+  const r = planet.geometry.parameters.radius;
   camcontrols.minDistance = r * 1.5;
   camera.position.copy(tmp).add(new THREE.Vector3(0, -r * 5, r * 2));
   camcontrols.target.copy(tmp);
+
+  showPlanetInfo(nombre);
 }
 
 function cambiarVista(v) {
   params.Planet = "None";
-  seguir = null;
+  planet = null;
+  hidePlanetInfo();   // <-- nueva
   camcontrols.minDistance = 0;
   camcontrols.target.set(0, 0, 0);
   if (v === "Overhead") camera.position.set(0, -0.01, 90);
@@ -120,7 +244,7 @@ function init() {
   info.style.backgroundColor = "transparent";
   info.style.zIndex = "1";
   info.style.fontFamily = "Monospace";
-  info.innerHTML = "three.js - sol y planetas";
+  info.innerHTML = "Dylan Castrillón Suárez - Solar System";
   document.body.appendChild(info);
 
   //Defino cámara
@@ -155,13 +279,6 @@ function init() {
     Lpunt.shadow.normalBias = 0.05;
   }
   scene.add(Lpunt);
-
-  //Rejilla de referencia indicando tamaño y divisiones
-  /*grid = new THREE.GridHelper(120, 10);
-  //Mostrarla en vertical
-  grid.geometry.rotateX(Math.PI / 2);
-  grid.position.set(0, 0, 0.05);
-  scene.add(grid);*/
 
   //Objetos
   Estrella(3, 0xffff00, 0.0008, sunTex);
@@ -210,7 +327,7 @@ function init() {
   Luna(Planetas[7], 0.15, 2.2, -3.0, 0xd8c9c0, Math.PI / 6, 0, 0.05); // Triton
   Luna(Planetas[7], 0.05, 3.4, 0.8, 0xaaaaaa, Math.PI / 12, 0.01, 0.02); // Nereida
 
-  CinturonAsteroides(1000, 28, 36);
+  CinturonAsteroides(1000, 28, 36, asteroidTex);
 
   createGUI();
 
@@ -326,9 +443,14 @@ function Luna(planeta, radio, dist, vel, col, angle, rotationX, rotationY, textu
   pivote.add(luna);
 }
 
-function CinturonAsteroides(n, rMin, rMax) {
+function CinturonAsteroides(n, rMin, rMax, texture) {
   const geom = new THREE.IcosahedronGeometry(0.08, 0);
   const mat = new THREE.MeshPhongMaterial({ color: 0x8a7f73 });
+
+    if (texture != undefined) {
+    mat.map = texture;
+  }
+
   asteroides = new THREE.InstancedMesh(geom, mat, n);
   asteroides.frustumCulled = false;
 
@@ -395,8 +517,8 @@ function animationLoop() {
   });
   asteroides.instanceMatrix.needsUpdate = true;
 
-  if (seguir) {
-    seguir.getWorldPosition(tmp);
+  if (planet) {
+    planet.getWorldPosition(tmp);
     const delta = tmp.clone().sub(camcontrols.target);
     camcontrols.target.copy(tmp);
     camera.position.add(delta);

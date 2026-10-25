@@ -1,0 +1,119 @@
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      .planet-card {
+        position: fixed;
+        top: 80px;
+        left: 20px;
+        width: 320px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        padding: 20px;
+        border-radius: 16px;
+        color: #e8ecf5;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: rgba(12, 16, 32, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        z-index: 10;
+      }
+
+      .planet-card.hidden {
+        opacity: 0;
+        transform: translateX(20px);
+        pointer-events: none;
+      }
+
+      .planet-card__header h2 {
+        margin: 0 0 12px;
+        font-size: 1.6rem;
+        letter-spacing: 0.04em;
+        color: #ffd27a;
+      }
+
+      .planet-card__description {
+        margin: 0 0 16px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #c3cadb;
+      }
+
+      .planet-card__stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 0;
+      }
+
+      .stat {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .stat--wide {
+        grid-column: 1 / -1;
+      }
+
+      .stat dt {
+        margin: 0 0 4px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8f9ab5;
+      }
+
+      .stat dd {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      @media (max-width: 600px) {
+        .planet-card {
+          top: auto;
+          bottom: 10px;
+          right: 10px;
+          left: 10px;
+          width: auto;
+          max-height: 45vh;
+        }
+      }
+
+      .lang-switch {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        display: flex;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(12, 16, 32, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 11;
+      }
+
+      .lang-switch button {
+        padding: 8px 14px;
+        border: none;
+        background: transparent;
+        color: #8f9ab5;
+        font: 600 0.8rem "Segoe UI", system-ui, sans-serif;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .lang-switch button:hover { color: #e8ecf5; }
+
+      .lang-switch button.active {
+        background: #ffd27a;
+        color: #1a1a2e;
+      }
